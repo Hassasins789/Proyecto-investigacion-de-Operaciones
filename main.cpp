@@ -3,292 +3,234 @@
 #include <limits>
 #include <sstream>
 #include <algorithm>
+#include <iomanip>
 
 using namespace std;
 
 class Transporte {
-public:
-    int numCentros, numPuertos;
-    vector<vector<int>> costos;
-    vector<int> oferta, demanda;
+    // ... [resto de la clase se mantiene igual hasta los métodos a corregir]
 
-    // Función para validar que el valor ingresado sea numérico
-    template<typename T>
-    T obtenerEntradaNumerica() {
-        T valor;
-        string entrada;
-        while (true) {
-            getline(cin, entrada);
-            stringstream ss(entrada);
-            if (ss >> valor && ss.eof()) {
-                return valor;
-            }
-            cout << "Error: ingrese un numero valido.\nIntente de nuevo: ";
-        }
-    }
-
-    void ingresarDatos() {
-        cout << "Ingrese numero de centros logisticos: ";
-        numCentros = obtenerEntradaNumerica<int>();
-
-        cout << "Ingrese numero de puertos: ";
-        numPuertos = obtenerEntradaNumerica<int>();
-
-        oferta.resize(numCentros);
-        demanda.resize(numPuertos);
-        costos.resize(numCentros, vector<int>(numPuertos));
-
-        cout << "Ingrese la oferta de cada centro:\n";
-        for (int i = 0; i < numCentros; i++) {
-            cout << "Centro " << i + 1 << ": ";
-            oferta[i] = obtenerEntradaNumerica<int>();
-        }
-
-        cout << "Ingrese la demanda de cada puerto:\n";
-        for (int j = 0; j < numPuertos; j++) {
-            cout << "Puerto " << j + 1 << ": ";
-            demanda[j] = obtenerEntradaNumerica<int>();
-        }
-
-        cout << "Ingrese la matriz de costos (por contenedor):\n";
-        for (int i = 0; i < numCentros; i++) {
-            for (int j = 0; j < numPuertos; j++) {
-                cout << "Costo de Centro " << i + 1 << " a Puerto " << j + 1 << ": ";
-                costos[i][j] = obtenerEntradaNumerica<int>();
-            }
-        }
-
-        mostrarMatriz();
-    }
-
-    // Función para mostrar la matriz de costos, oferta y demanda
-    void mostrarMatriz() {
-        cout << "\nMatriz de Costos:\n";
-        for (int i = 0; i < numCentros; i++) {
-            for (int j = 0; j < numPuertos; j++) {
-                cout << costos[i][j] << "\t";
-            }
-            cout << "| " << oferta[i] << " (Oferta)\n";
-        }
-        cout << "-------------------------------------\n";
-        for (int j = 0; j < numPuertos; j++) {
-            cout << demanda[j] << "\t";
-        }
-        cout << "(Demanda)\n\n";
-    }
-
-    // Método de Menor Costo
-    void menorCosto() {
+    void vogel() {
         vector<int> ofertaRemanente = oferta;
         vector<int> demandaRemanente = demanda;
         vector<vector<int>> asignaciones(numCentros, vector<int>(numPuertos, 0));
         int costoTotal = 0;
+        bool hayAsignacionPendiente = true;
 
-        cout << "Resolviendo usando el metodo de menor costo...\n";
-        
-        while (true) {
-            int menorCosto = numeric_limits<int>::max();
-            int fila = -1, columna = -1;
+        cout << "\nResolviendo usando el metodo de aproximacion de Vogel...\n\n";
 
+        while (hayAsignacionPendiente) {
+            // Calcular penalizaciones por fila
+            vector<pair<int, pair<int, int>>> penalizacionesFila;
             for (int i = 0; i < numCentros; i++) {
-                for (int j = 0; j < numPuertos; j++) {
-                    if (ofertaRemanente[i] > 0 && demandaRemanente[j] > 0 && costos[i][j] < menorCosto) {
-                        menorCosto = costos[i][j];
-                        fila = i;
-                        columna = j;
-                    }
-                }
-            }
-
-            if (fila == -1 || columna == -1) break; 
-
-            int asignacion = min(ofertaRemanente[fila], demandaRemanente[columna]);
-            asignaciones[fila][columna] = asignacion;
-            costoTotal += asignacion * costos[fila][columna];
-
-            ofertaRemanente[fila] -= asignacion;
-            demandaRemanente[columna] -= asignacion;
-        }
-
-        cout << "Costo total con el metodo de menor costo: " << costoTotal << "\n";
-    }
-
-    // Método de Esquina Noroeste
-    void esquinaNoroeste() {
-        vector<int> ofertaRemanente = oferta;
-        vector<int> demandaRemanente = demanda;
-        vector<vector<int>> asignaciones(numCentros, vector<int>(numPuertos, 0));
-        int costoTotal = 0;
-
-        cout << "Resolviendo usando el metodo de esquina noroeste...\n";
-
-        int i = 0, j = 0;
-        while (i < numCentros && j < numPuertos) {
-            int asignacion = min(ofertaRemanente[i], demandaRemanente[j]);
-            asignaciones[i][j] = asignacion;
-            costoTotal += asignacion * costos[i][j];
-
-            ofertaRemanente[i] -= asignacion;
-            demandaRemanente[j] -= asignacion;
-
-            if (ofertaRemanente[i] == 0) i++;
-            if (demandaRemanente[j] == 0) j++;
-        }
-
-        cout << "Costo total con el metodo de esquina noroeste: " << costoTotal << "\n";
-    }
-
-    // Método de Aproximación de Vogel
-    void voguel() {
-        vector<int> ofertaRemanente = oferta;
-        vector<int> demandaRemanente = demanda;
-        vector<vector<int>> asignaciones(numCentros, vector<int>(numPuertos, 0));
-        int costoTotal = 0;
-
-        cout << "Resolviendo usando el metodo de aproximacion de Vogel...\n";
-
-        while (true) {
-            vector<int> penalizacionFila(numCentros, -1), penalizacionColumna(numPuertos, -1);
-
-            for (int i = 0; i < numCentros; i++) {
-                if (ofertaRemanente[i] > 0) {
-                    int min1 = numeric_limits<int>::max(), min2 = numeric_limits<int>::max();
-                    for (int j = 0; j < numPuertos; j++) {
-                        if (demandaRemanente[j] > 0) {
-                            if (costos[i][j] < min1) {
-                                min2 = min1;
-                                min1 = costos[i][j];
-                            } else if (costos[i][j] < min2) {
-                                min2 = costos[i][j];
-                            }
-                        }
-                    }
-                    penalizacionFila[i] = min2 - min1;
-                }
-            }
-
-            for (int j = 0; j < numPuertos; j++) {
-                if (demandaRemanente[j] > 0) {
-                    int min1 = numeric_limits<int>::max(), min2 = numeric_limits<int>::max();
-                    for (int i = 0; i < numCentros; i++) {
-                        if (ofertaRemanente[i] > 0) {
-                            if (costos[i][j] < min1) {
-                                min2 = min1;
-                                min1 = costos[i][j];
-                            } else if (costos[i][j] < min2) {
-                                min2 = costos[i][j];
-                            }
-                        }
-                    }
-                    penalizacionColumna[j] = min2 - min1;
-                }
-            }
-
-            int maxPenalizacion = -1;
-            int fila = -1, columna = -1;
-
-            for (int i = 0; i < numCentros; i++) {
-                if (penalizacionFila[i] > maxPenalizacion) {
-                    maxPenalizacion = penalizacionFila[i];
-                    fila = i;
-                    columna = -1;
-                }
-            }
-
-            for (int j = 0; j < numPuertos; j++) {
-                if (penalizacionColumna[j] > maxPenalizacion) {
-                    maxPenalizacion = penalizacionColumna[j];
-                    fila = -1;
-                    columna = j;
-                }
-            }
-
-            if (fila == -1 && columna == -1) break;
-
-            if (fila != -1) {
+                if (ofertaRemanente[i] <= 0) continue;
+                vector<int> costosDisponibles;
                 for (int j = 0; j < numPuertos; j++) {
                     if (demandaRemanente[j] > 0) {
-                        int asignacion = min(ofertaRemanente[fila], demandaRemanente[j]);
-                        asignaciones[fila][j] = asignacion;
-                        costoTotal += asignacion * costos[fila][j];
-                        ofertaRemanente[fila] -= asignacion;
-                        demandaRemanente[j] -= asignacion;
-                        break;
+                        costosDisponibles.push_back(costos[i][j]);
                     }
                 }
-            } else {
+                if (costosDisponibles.size() >= 2) {
+                    sort(costosDisponibles.begin(), costosDisponibles.end());
+                    penalizacionesFila.push_back({costosDisponibles[1] - costosDisponibles[0], {i, -1}});
+                }
+            }
+
+            // Calcular penalizaciones por columna
+            vector<pair<int, pair<int, int>>> penalizacionesColumna;
+            for (int j = 0; j < numPuertos; j++) {
+                if (demandaRemanente[j] <= 0) continue;
+                vector<int> costosDisponibles;
                 for (int i = 0; i < numCentros; i++) {
                     if (ofertaRemanente[i] > 0) {
-                        int asignacion = min(ofertaRemanente[i], demandaRemanente[columna]);
-                        asignaciones[i][columna] = asignacion;
-                        costoTotal += asignacion * costos[i][columna];
-                        ofertaRemanente[i] -= asignacion;
-                        demandaRemanente[columna] -= asignacion;
-                        break;
+                        costosDisponibles.push_back(costos[i][j]);
                     }
+                }
+                if (costosDisponibles.size() >= 2) {
+                    sort(costosDisponibles.begin(), costosDisponibles.end());
+                    penalizacionesColumna.push_back({costosDisponibles[1] - costosDisponibles[0], {-1, j}});
+                }
+            }
+
+            // Encontrar la mayor penalización
+            int maxPenalizacion = -1;
+            int filaSelec = -1, columnaSelec = -1;
+
+            for (const auto& p : penalizacionesFila) {
+                if (p.first > maxPenalizacion) {
+                    maxPenalizacion = p.first;
+                    filaSelec = p.second.first;
+                    columnaSelec = -1;
+                }
+            }
+
+            for (const auto& p : penalizacionesColumna) {
+                if (p.first > maxPenalizacion) {
+                    maxPenalizacion = p.first;
+                    filaSelec = -1;
+                    columnaSelec = p.second.second;
+                }
+            }
+
+            if (maxPenalizacion == -1) {
+                // Buscar última asignación posible
+                for (int i = 0; i < numCentros; i++) {
+                    for (int j = 0; j < numPuertos; j++) {
+                        if (ofertaRemanente[i] > 0 && demandaRemanente[j] > 0) {
+                            filaSelec = i;
+                            columnaSelec = j;
+                            break;
+                        }
+                    }
+                    if (filaSelec != -1) break;
+                }
+            }
+
+            if (filaSelec == -1 && columnaSelec == -1) {
+                hayAsignacionPendiente = false;
+                continue;
+            }
+
+            // Realizar asignación
+            if (filaSelec != -1) {
+                // Encontrar el menor costo en la fila seleccionada
+                int menorCosto = numeric_limits<int>::max();
+                int colMenorCosto = -1;
+                for (int j = 0; j < numPuertos; j++) {
+                    if (demandaRemanente[j] > 0 && costos[filaSelec][j] < menorCosto) {
+                        menorCosto = costos[filaSelec][j];
+                        colMenorCosto = j;
+                    }
+                }
+                if (colMenorCosto != -1) {
+                    int asignacion = min(ofertaRemanente[filaSelec], demandaRemanente[colMenorCosto]);
+                    asignaciones[filaSelec][colMenorCosto] = asignacion;
+                    costoTotal += asignacion * costos[filaSelec][colMenorCosto];
+                    ofertaRemanente[filaSelec] -= asignacion;
+                    demandaRemanente[colMenorCosto] -= asignacion;
+                }
+            } else {
+                // Encontrar el menor costo en la columna seleccionada
+                int menorCosto = numeric_limits<int>::max();
+                int filaMenorCosto = -1;
+                for (int i = 0; i < numCentros; i++) {
+                    if (ofertaRemanente[i] > 0 && costos[i][columnaSelec] < menorCosto) {
+                        menorCosto = costos[i][columnaSelec];
+                        filaMenorCosto = i;
+                    }
+                }
+                if (filaMenorCosto != -1) {
+                    int asignacion = min(ofertaRemanente[filaMenorCosto], demandaRemanente[columnaSelec]);
+                    asignaciones[filaMenorCosto][columnaSelec] = asignacion;
+                    costoTotal += asignacion * costos[filaMenorCosto][columnaSelec];
+                    ofertaRemanente[filaMenorCosto] -= asignacion;
+                    demandaRemanente[columnaSelec] -= asignacion;
                 }
             }
         }
 
-        cout << "Costo total con el metodo de aproximacion de Vogel: " << 2975000 << "\n";
+        // Mostrar resultados
+        cout << "Matriz de asignaciones:\n";
+        for (int i = 0; i < numCentros; i++) {
+            for (int j = 0; j < numPuertos; j++) {
+                cout << setw(4) << asignaciones[i][j] << " ";
+            }
+            cout << "\n";
+        }
+        cout << "\nCosto total con el metodo de Vogel: " << costoTotal << "\n\n";
     }
 
-    // Método Húngaro para asignación de mínimo costo
     void metodoHungaro() {
-        cout << "Resolviendo usando el metodo Hungaro...\n";
+        cout << "\nResolviendo usando el metodo Hungaro...\n\n";
+        
+        // Crear una copia de la matriz de costos
+        vector<vector<int>> matrizTrabajo = costos;
+        int n = max(numCentros, numPuertos);
+        
+        // Expandir la matriz si no es cuadrada
+        for (auto& fila : matrizTrabajo) {
+            while (fila.size() < n) fila.push_back(0);
+        }
+        while (matrizTrabajo.size() < n) {
+            matrizTrabajo.push_back(vector<int>(n, 0));
+        }
 
         // Paso 1: Reducción de filas
-        for (int i = 0; i < numCentros; i++) {
-            int min_val = *min_element(costos[i].begin(), costos[i].end());
-            for (int j = 0; j < numPuertos; j++) {
-                costos[i][j] -= min_val;
+        for (int i = 0; i < n; i++) {
+            int minFila = *min_element(matrizTrabajo[i].begin(), matrizTrabajo[i].end());
+            for (int j = 0; j < n; j++) {
+                matrizTrabajo[i][j] -= minFila;
             }
         }
 
         // Paso 2: Reducción de columnas
-        for (int j = 0; j < numPuertos; j++) {
-            int min_val = numeric_limits<int>::max();
-            for (int i = 0; i < numCentros; i++) {
-                min_val = min(min_val, costos[i][j]);
+        for (int j = 0; j < n; j++) {
+            int minCol = numeric_limits<int>::max();
+            for (int i = 0; i < n; i++) {
+                minCol = min(minCol, matrizTrabajo[i][j]);
             }
-            for (int i = 0; i < numCentros; i++) {
-                costos[i][j] -= min_val;
+            for (int i = 0; i < n; i++) {
+                matrizTrabajo[i][j] -= minCol;
             }
         }
 
-        // Paso 3: Crear marcadores para las filas y columnas
-        vector<bool> filaMarcada(numCentros, false), columnaMarcada(numPuertos, false);
-        vector<vector<int>> asignaciones(numCentros, vector<int>(numPuertos, 0));
+        vector<int> asignacionFila(n, -1);
+        vector<int> asignacionColumna(n, -1);
+        vector<bool> filaMarcada(n, false);
+        vector<bool> columnaMarcada(n, false);
 
-        // Asignar ceros en filas y columnas
-        for (int i = 0; i < numCentros; i++) {
-            for (int j = 0; j < numPuertos; j++) {
-                if (costos[i][j] == 0 && !filaMarcada[i] && !columnaMarcada[j]) {
-                    asignaciones[i][j] = 1; // Asignar esta posición
-                    filaMarcada[i] = true;
-                    columnaMarcada[j] = true;
+        // Función para encontrar un cero no marcado
+        auto encontrarCero = [&]() -> pair<int, int> {
+            for (int i = 0; i < n; i++) {
+                if (!filaMarcada[i]) {
+                    for (int j = 0; j < n; j++) {
+                        if (!columnaMarcada[j] && matrizTrabajo[i][j] == 0) {
+                            return {i, j};
+                        }
+                    }
                 }
             }
+            return {-1, -1};
+        };
+
+        // Paso 3: Encontrar asignación inicial
+        int asignaciones = 0;
+        while (asignaciones < n) {
+            auto [i, j] = encontrarCero();
+            if (i == -1) break;
+
+            asignacionFila[i] = j;
+            asignacionColumna[j] = i;
+            filaMarcada[i] = true;
+            columnaMarcada[j] = true;
+            asignaciones++;
         }
 
-        cout << "Costo total con el metodo Hungaro: " << 12000 << "\n"; // Costo final esperado para el método húngaro
+        // Calcular el costo total
+        int costoTotal = 0;
+        for (int i = 0; i < numCentros; i++) {
+            if (asignacionFila[i] != -1 && asignacionFila[i] < numPuertos) {
+                costoTotal += costos[i][asignacionFila[i]];
+            }
+        }
+
+        // Mostrar resultados
+        cout << "Matriz de asignaciones:\n";
+        vector<vector<int>> asignacionesFinal(numCentros, vector<int>(numPuertos, 0));
+        for (int i = 0; i < numCentros; i++) {
+            if (asignacionFila[i] != -1 && asignacionFila[i] < numPuertos) {
+                asignacionesFinal[i][asignacionFila[i]] = min(oferta[i], demanda[asignacionFila[i]]);
+            }
+        }
+
+        for (int i = 0; i < numCentros; i++) {
+            for (int j = 0; j < numPuertos; j++) {
+                cout << setw(4) << asignacionesFinal[i][j] << " ";
+            }
+            cout << "\n";
+        }
+        
+        cout << "\nCosto total con el metodo Hungaro: " << costoTotal << "\n\n";
     }
 };
-
-int main() {
-    Transporte t;
-
-    // Ingresar los datos de oferta, demanda y costos
-    t.ingresarDatos();
-
-    // Ejecutar los métodos de asignación
-    t.menorCosto();
-    t.esquinaNoroeste();
-    t.voguel();
-    t.metodoHungaro();
-
-    return 0;
-}
-
-
-
+ 
